@@ -1,4 +1,4 @@
 #Scrollable calendar view#
 
-![Scroll view](https://psv4.vk.me/c812325/u341708137/docs/ff5144d31938/scroll.gif)
+![Scroll view](https://github.com/remagister/calendarview/blob/master/img/scroll.gif)
 
