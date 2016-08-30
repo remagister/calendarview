@@ -58,7 +58,7 @@ public class ItemContainer implements IDrawable {
         }
     }
 
-    private static final int INVISIBLE_ITEMS = 4;
+    private static final int INVISIBLE_ITEMS = 2;
     private static final int VISIBLE_ITEMS = 3;
     private LinkedList<Crate> internalItems = new LinkedList<>();
     private Crate current;
@@ -76,6 +76,13 @@ public class ItemContainer implements IDrawable {
     private float crateW;
     private float crateH;
     private boolean sizeAssigned = false;
+
+    public ItemContainer(float x, float y, int visibleItems){
+        if (visibleItems % 2 == 0)
+            throw new IllegalArgumentException("visibleItems has to be odd.");
+        padding = 15f;
+        setOrigin(x, y);
+    }
 
     public ItemContainer(IDataWindow window, float x, float y, float padding, int visibleItems) {
         if (visibleItems % 2 == 0)

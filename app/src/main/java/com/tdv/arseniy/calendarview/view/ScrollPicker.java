@@ -5,8 +5,10 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ScrollerCompat;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
@@ -15,67 +17,68 @@ import android.view.View;
 import android.widget.OverScroller;
 import android.widget.Scroller;
 
-import com.tdv.arseniy.calendarview.view.drawable.AnimItemContainer;
 import com.tdv.arseniy.calendarview.view.drawable.DrawableItemFactory;
-import com.tdv.arseniy.calendarview.view.drawable.ItemContainer;
+import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
+import com.tdv.arseniy.calendarview.view.provider.IDataWindow;
 import com.tdv.arseniy.calendarview.view.provider.NumericWindow;
 
 /**
  * Created by arseniy on 27.08.16.
  */
 
-public class View2D extends View {
+public class ScrollPicker extends View {
 
     private class Detector extends GestureDetector.SimpleOnGestureListener{
 
-        private AnimItemContainer container;
+        private IContainer container;
 
-        Detector(AnimItemContainer container) {
+        Detector(IContainer container) {
             this.container = container;
         }
 
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            container.starFlingWith(-velocityY);
-            invalidate();
+            //container.starFlingWith(-velocityY);
             return true;
         }
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            container.scrollWith(-distanceY);
+            container.scroll(-distanceY);
             return true;
         }
 
         @Override
         public boolean onDown(MotionEvent e) {
-            container.stop();
             return true;
         }
     }
 
-    public View2D(Context context) {
+    public ScrollPicker(Context context) {
         super(context);
         init();
     }
 
-    public View2D(Context context, AttributeSet attrs) {
+    public ScrollPicker(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    private AnimItemContainer container;
+    private IContainer container;
     private GestureDetector detector;
+    private Rect renderTarget = new Rect();
+    private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private void init(){
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setTypeface(Typeface.DEFAULT);
         textPaint.setTextSize(52);
         DrawableItemFactory factory = new DrawableItemFactory(textPaint);
-        NumericWindow window = new NumericWindow(1, 21, factory);
+        Rect bounds = factory.getSampleBounds(new Rect(), "32");
+        NumericWindow window = new NumericWindow(1, 31, factory);
         window.setPivot(5);
         window.setFormat("%02d");
-        container = new AnimItemContainer(window, new Scroller(getContext()));
+        container = new ItemContainer(window, bounds.width(),bounds.height());
         detector = new GestureDetector(getContext(),
                 new Detector(container));
     }
@@ -88,16 +91,28 @@ public class View2D extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        container.draw(canvas);
+        canvas.save(Canvas.CLIP_SAVE_FLAG);
+        canvas.clipRect(renderTarget);
+
+        for (IDrawable drawable: container) {
+            drawable.draw(canvas);
+        }
+
+        paint.setColor(Color.BLACK);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(5f);
+        canvas.drawLine(0,0, getMeasuredWidth(), getMeasuredHeight(), paint);
+
+        canvas.restore();
     }
 
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int desiredWidth = container.getWidth() + getPaddingLeft() + getPaddingRight();
-        int desiredHeight = container.getHeight() + getPaddingBottom() + getPaddingTop();
+        int desiredWidth = (int) container.measureWidth() + getPaddingLeft() + getPaddingRight();
+        int desiredHeight = (int) container.measureHeight() + getPaddingBottom() + getPaddingTop();
 
-        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        /*int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
@@ -110,7 +125,7 @@ public class View2D extends View {
                 width = widthSize;
                 break;
             case MeasureSpec.AT_MOST:
-                width = Math.min(desiredWidth, widthSize);
+                width = desiredWidth;
                 break;
             default: case MeasureSpec.UNSPECIFIED:
                 width = desiredWidth;
@@ -121,14 +136,15 @@ public class View2D extends View {
                 height = heightSize;
                 break;
             case MeasureSpec.AT_MOST:
-                height = Math.min(desiredHeight, heightSize);
+                height = desiredHeight;
                 break;
             default: case MeasureSpec.UNSPECIFIED:
                 height = desiredHeight;
                 break;
-        }
-        //MUST CALL THIS
-        setMeasuredDimension(width, height);
+        }*/
+        renderTarget.set(0, 0, desiredWidth, desiredHeight);
+        container.setOrigin(getPaddingLeft(), getPaddingTop());
+        setMeasuredDimension(desiredWidth, desiredHeight);
     }
 
     @Override

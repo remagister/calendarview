@@ -73,7 +73,8 @@ public class DrawableItemFactory {
         return ret;
     }
 
-    public void getSampleBounds(Rect rect, String sample){
-        textPaint.getTextBounds(sample, 0, sample.length(), rect);
+    public Rect getSampleBounds(Rect outRect, String sample){
+        textPaint.getTextBounds(sample, 0, sample.length(), outRect);
+        return outRect;
     }
 }

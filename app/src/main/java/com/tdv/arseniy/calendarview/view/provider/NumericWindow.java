@@ -62,6 +62,21 @@ public class NumericWindow implements IDataWindow {
 
     @Override
     public void shift(ShiftDirection direction, int by) {
-
+        switch (direction){
+            case BACKWARD:{
+                pivot -= by;
+                if(pivot < minimal){
+                    pivot = maximal - (minimal - pivot) + 1;
+                }
+                break;
+            }
+            case FORWARD:{
+                pivot += by;
+                if(pivot > maximal){
+                    pivot = minimal + (pivot - maximal) - 1;
+                }
+                break;
+            }
+        }
     }
 }
