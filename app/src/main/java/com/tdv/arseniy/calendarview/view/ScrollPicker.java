@@ -98,11 +98,6 @@ public class ScrollPicker extends View {
             drawable.draw(canvas);
         }
 
-        paint.setColor(Color.BLACK);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(5f);
-        canvas.drawLine(0,0, getMeasuredWidth(), getMeasuredHeight(), paint);
-
         canvas.restore();
     }
 

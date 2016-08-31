@@ -1,7 +1,6 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.graphics.Canvas;
-import android.util.Log;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.drawable.IMeasurable;
@@ -84,6 +83,7 @@ public class ItemContainer implements IContainer {
         private float boxWidth;
         private float padding;
         private int originIndex;
+        private float halfHeight;
 
         ItemBoxFactory(float maxItemWidth, float maxItemHeight) {
             this(maxItemWidth, maxItemHeight, 20f);
@@ -108,6 +108,7 @@ public class ItemContainer implements IContainer {
         private void init(){
             boxHeight = maxItemHeight + 2f*padding;
             boxWidth = maxItemWidth + 2f*padding;
+            halfHeight = boxHeight / 2f;
         }
 
         void setMaxItemSize(float width, float height){
@@ -133,7 +134,7 @@ public class ItemContainer implements IContainer {
         }
 
         ItemBox build(IDataWindow window, int index){
-            return new Box(boxHeight * (index - originIndex), (Item) window.receiveData(index));
+            return new Box(boxHeight * (index - originIndex) + halfHeight, (Item) window.receiveData(-index));
         }
     }
 
@@ -156,14 +157,13 @@ public class ItemContainer implements IContainer {
         }
     }
 
-    private static final int VISIBLE_ITEMS = 3;
+    private static final int VISIBLE_ITEMS = 5  ;
     private static final int PREPARED_ITEMS = 2;
     private IDataWindow window;
     private LinkedList<ItemBox> internalContainer = new LinkedList<>();
     private ItemBoxFactory itemBoxFactory;
     private ItemBox current;
     private int visibleItems = VISIBLE_ITEMS;
-    private int maxLoopTimes = visibleItems + PREPARED_ITEMS;
     private int pivot;
     private float height;
     private float originX = 0f;
@@ -186,57 +186,49 @@ public class ItemContainer implements IContainer {
         refresh();
     }
 
-    private void loop(int times, ShiftDirection direction){
-        if(times > maxLoopTimes) {
-            times = maxLoopTimes;
-        }
-        window.shift(direction, times);
-        ItemBox pre, curr;
-        switch (direction){
-            case BACKWARD:{
-                while(times-- != 0){
-                    pre = internalContainer.getLast();
-                    curr = internalContainer.removeFirst();
-                    curr.setItem((Item) window.receiveData(-pivot+times-1));
-                    curr.setOffset(pre.getOffset() + itemBoxFactory.getBoxHeight());
-                    internalContainer.addLast(curr);
-                }
-                break;
-            }
-            case FORWARD:{
-                while(times-- != 0){
-                    pre = internalContainer.getFirst();
-                    curr = internalContainer.removeLast();
-                    curr.setItem((Item) window.receiveData(pivot-times+1));
-                    curr.setOffset(pre.getOffset() - itemBoxFactory.getBoxHeight());
-                    internalContainer.addFirst(curr);
-                }
-                break;
-            }
-        }
-        current = internalContainer.get(pivot);
-    }
-
     @Override
     public void scroll(float dx) {
+        if(dx == 0f) {
+            return;
+        }
         for (ItemBox box: internalContainer) {
             box.move(dx);
         }
-        if(current.getOffset() < itemBoxFactory.getOffsetAtIndex(-1)){
-            loop(1, ShiftDirection.BACKWARD);
+        ItemBox pre, curr;
+        if(dx > 0f){
+            while (true) {
+                curr = internalContainer.getFirst();
+                if (curr.getOffset() > itemBoxFactory.getOffsetAtIndex(pivot) + itemBoxFactory.getBoxHeight()) {
+                    window.shift(ShiftDirection.FORWARD);
+                    pre = internalContainer.getLast();
+                    internalContainer.removeFirst();
+                    curr.setItem((Item) window.receiveData(pivot));
+                    curr.setOffset(pre.getOffset() - itemBoxFactory.getBoxHeight());
+                    internalContainer.addLast(curr);
+                }
+                else{
+                    current = internalContainer.get(pivot);
+                    break;
+                }
+            }
         }
-        else if (current.getOffset() > itemBoxFactory.getOffsetAtIndex(1)){
-            loop(1, ShiftDirection.FORWARD);
+        else{
+            while (true) {
+                curr = internalContainer.getLast();
+                if (curr.getOffset() < itemBoxFactory.getOffsetAtIndex(-pivot)) {
+                    window.shift(ShiftDirection.BACKWARD);
+                    pre = internalContainer.getFirst();
+                    internalContainer.removeLast();
+                    curr.setItem((Item) window.receiveData(-pivot));
+                    curr.setOffset(pre.getOffset() + itemBoxFactory.getBoxHeight());
+                    internalContainer.addFirst(curr);
+                }
+                else{
+                    current = internalContainer.get(pivot);
+                    break;
+                }
+            }
         }
-        /*int overlap = (int)((centerOffset - current.getOffset()) / itemBoxFactory.getBoxHeight());
-        // if > 0 then center moved up (backward scroll)
-        if(overlap > 1){
-            loop(overlap, ShiftDirection.BACKWARD);
-        }
-        if(overlap < -1){
-            loop(-overlap, ShiftDirection.FORWARD);
-        }
-        Log.d("SCROLL", "overlap: " + overlap);*/
     }
 
     @Override
@@ -261,7 +253,6 @@ public class ItemContainer implements IContainer {
         internalContainer.clear();
         pivot = (visibleItems + PREPARED_ITEMS) / 2;
         itemBoxFactory.setOriginIndex(- pivot + PREPARED_ITEMS/2);
-        maxLoopTimes = visibleItems + PREPARED_ITEMS;
         for(int index = -pivot; index <= pivot; ++index){
             internalContainer.addFirst(itemBoxFactory.build(window, index));
         }
