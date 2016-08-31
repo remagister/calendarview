@@ -237,6 +237,7 @@ public class ItemContainer implements IContainer {
     @Override
     public void fling(float dy, Scroller scroller) {
         if(Math.abs(dy) < MIN_SPEED){
+            // not actually used yet
             scroller.fling(0, (int) current.getOffset(),    // x, y
                     0, (int) dy,                            // vx, vy
                     0, 0,                                   // minx maxx
