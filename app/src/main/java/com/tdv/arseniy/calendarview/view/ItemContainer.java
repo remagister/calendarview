@@ -222,7 +222,13 @@ public class ItemContainer implements IContainer {
         for (ItemBox box: internalContainer) {
             box.move(dx);
         }
-        int overlap = (int)((centerOffset - current.getOffset()) / itemBoxFactory.getBoxHeight());
+        if(current.getOffset() < itemBoxFactory.getOffsetAtIndex(-1)){
+            loop(1, ShiftDirection.BACKWARD);
+        }
+        else if (current.getOffset() > itemBoxFactory.getOffsetAtIndex(1)){
+            loop(1, ShiftDirection.FORWARD);
+        }
+        /*int overlap = (int)((centerOffset - current.getOffset()) / itemBoxFactory.getBoxHeight());
         // if > 0 then center moved up (backward scroll)
         if(overlap > 1){
             loop(overlap, ShiftDirection.BACKWARD);
@@ -230,6 +236,7 @@ public class ItemContainer implements IContainer {
         if(overlap < -1){
             loop(-overlap, ShiftDirection.FORWARD);
         }
+        Log.d("SCROLL", "overlap: " + overlap);*/
     }
 
     @Override
