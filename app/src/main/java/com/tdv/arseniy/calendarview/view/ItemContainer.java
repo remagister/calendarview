@@ -1,6 +1,7 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.graphics.Canvas;
+import android.widget.Scroller;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.drawable.IMeasurable;
@@ -157,8 +158,10 @@ public class ItemContainer implements IContainer {
         }
     }
 
-    private static final int VISIBLE_ITEMS = 5  ;
+    private static final int VISIBLE_ITEMS = 7;
     private static final int PREPARED_ITEMS = 2;
+    public static final float MAX_SPEED = 5000;
+    public static final float MIN_SPEED = 200;
     private IDataWindow window;
     private LinkedList<ItemBox> internalContainer = new LinkedList<>();
     private ItemBoxFactory itemBoxFactory;
@@ -229,6 +232,26 @@ public class ItemContainer implements IContainer {
                 }
             }
         }
+    }
+
+    @Override
+    public void fling(float dy, Scroller scroller) {
+        if(Math.abs(dy) < MIN_SPEED){
+            scroller.fling(0, (int) current.getOffset(),    // x, y
+                    0, (int) dy,                            // vx, vy
+                    0, 0,                                   // minx maxx
+                    (int) current.getOffset() - (int) itemBoxFactory.getBoxHeight()*50,
+                    (int) current.getOffset() + (int) itemBoxFactory.getBoxHeight()*50);
+            return;
+        }
+        if(Math.abs(dy) > MAX_SPEED){
+            dy = MAX_SPEED * Math.signum(dy);
+        }
+        scroller.fling(0, (int) current.getOffset(),    // x, y
+                0, (int) dy,                            // vx, vy
+                0, 0,                                   // minx maxx
+                (int) current.getOffset() - (int) itemBoxFactory.getBoxHeight()*50,
+                (int) current.getOffset() + (int) itemBoxFactory.getBoxHeight()*50);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.graphics.Canvas;
+import android.widget.Scroller;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.drawable.IMeasurable;
@@ -16,6 +17,7 @@ public interface IContainer extends IMeasurable, Iterable<IDrawable>{
 
     void setDataWindow(IDataWindow window);
     void scroll(float dx);
+    void fling(float dy, Scroller scroller);
     void setMaxItemSize(float width, float height);
     Item getCurrent();
     float getCentralUpperBound();

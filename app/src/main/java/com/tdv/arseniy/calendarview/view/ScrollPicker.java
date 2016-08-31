@@ -30,15 +30,9 @@ public class ScrollPicker extends View {
 
     private class Detector extends GestureDetector.SimpleOnGestureListener{
 
-        private IContainer container;
-
-        Detector(IContainer container) {
-            this.container = container;
-        }
-
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            //container.starFlingWith(-velocityY);
+            container.fling(velocityY, scroller);
             return true;
         }
 
@@ -50,6 +44,7 @@ public class ScrollPicker extends View {
 
         @Override
         public boolean onDown(MotionEvent e) {
+            scroller.forceFinished(true);
             return true;
         }
     }
@@ -64,6 +59,7 @@ public class ScrollPicker extends View {
         init();
     }
 
+    private Scroller scroller;
     private IContainer container;
     private GestureDetector detector;
     private Rect renderTarget = new Rect();
@@ -72,15 +68,15 @@ public class ScrollPicker extends View {
     private void init(){
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setTypeface(Typeface.DEFAULT);
-        textPaint.setTextSize(52);
+        textPaint.setTextSize(72);
         DrawableItemFactory factory = new DrawableItemFactory(textPaint);
         Rect bounds = factory.getSampleBounds(new Rect(), "32");
         NumericWindow window = new NumericWindow(1, 31, factory);
         window.setPivot(5);
         window.setFormat("%02d");
         container = new ItemContainer(window, bounds.width(),bounds.height());
-        detector = new GestureDetector(getContext(),
-                new Detector(container));
+        detector = new GestureDetector(getContext(), new Detector());
+        scroller = new Scroller(getContext());
     }
 
     private static int DIM_GRAY = Color.argb(0x20, 0x40, 0x40, 0x40);
@@ -143,9 +139,20 @@ public class ScrollPicker extends View {
     }
 
     @Override
+    public void computeScroll() {
+        super.computeScroll();
+        final float lastY = scroller.getCurrY();
+        boolean isContinued = scroller.computeScrollOffset();
+        if(isContinued){
+            container.scroll(scroller.getCurrY() - lastY);
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
+    @Override
     public boolean onTouchEvent(MotionEvent event) {
         boolean ret = detector.onTouchEvent(event);
-        invalidate();
+        ViewCompat.postInvalidateOnAnimation(this);
         return ret;
     }
 }
