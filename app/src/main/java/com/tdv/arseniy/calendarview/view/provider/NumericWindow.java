@@ -39,7 +39,7 @@ public class NumericWindow implements IDataWindow {
         } else if (ret > maximal){
             ret -= maximal - minimal + 1;
         }
-        return factory.create(String.format(Locale.ENGLISH, format, ret));
+        return factory.create(ret, format);
     }
 
     @Override

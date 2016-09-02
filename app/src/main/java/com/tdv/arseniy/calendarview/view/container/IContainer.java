@@ -1,4 +1,4 @@
-package com.tdv.arseniy.calendarview.view;
+package com.tdv.arseniy.calendarview.view.container;
 
 import android.graphics.Canvas;
 import android.widget.Scroller;
@@ -23,4 +23,5 @@ public interface IContainer extends IMeasurable, Iterable<IDrawable>{
     float getCentralUpperBound();
     void refresh();
     void setOrigin(float x, float y);
+    void setOnItemChangedListener(OnItemChangedListener listener);
 }

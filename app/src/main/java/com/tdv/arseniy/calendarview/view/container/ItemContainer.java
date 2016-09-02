@@ -1,7 +1,6 @@
-package com.tdv.arseniy.calendarview.view;
+package com.tdv.arseniy.calendarview.view.container;
 
 import android.graphics.Canvas;
-import android.util.Log;
 import android.widget.Scroller;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
@@ -190,12 +189,13 @@ public class ItemContainer implements IContainer {
     private float originY = 0f;
     private float maxSpeed;
     private float minSpeed;
+    private OnItemChangedListener listener;
 
-    ItemContainer(float maxItemWidth, float maxItemHeight) {
+    public ItemContainer(float maxItemWidth, float maxItemHeight) {
         itemBoxFactory = new ItemBoxFactory(maxItemWidth, maxItemHeight);
     }
 
-    ItemContainer(IDataWindow window, float maxItemWidth, float maxItemHeight) {
+    public ItemContainer(IDataWindow window, float maxItemWidth, float maxItemHeight) {
         this(maxItemWidth, maxItemHeight);
         this.window = window;
         refresh();
@@ -207,6 +207,14 @@ public class ItemContainer implements IContainer {
         refresh();
     }
 
+    private void centerItem(){
+        Object oldData = current.getItem().getData();
+        current = internalContainer.get(pivot);
+        if(listener != null){
+            listener.onItemChanged(this, oldData, current.getItem().getData());
+        }
+    }
+
     @Override
     public void scroll(float dx) {
         if(dx == 0f) {
@@ -216,6 +224,7 @@ public class ItemContainer implements IContainer {
             box.move(dx);
         }
         ItemBox pre, curr;
+        boolean shiftNeeded = false;
         if(dx > 0f){
             while (true) {
                 curr = internalContainer.getFirst();
@@ -226,9 +235,12 @@ public class ItemContainer implements IContainer {
                     curr.setItem((Item) window.receiveData(pivot));
                     curr.setOffset(pre.getOffset() - itemBoxFactory.getBoxHeight());
                     internalContainer.addLast(curr);
+                    shiftNeeded = true;
                 }
                 else{
-                    current = internalContainer.get(pivot);
+                    if(shiftNeeded && dx < itemBoxFactory.getBoxHeight()) {
+                        centerItem();
+                    }
                     break;
                 }
             }
@@ -243,9 +255,12 @@ public class ItemContainer implements IContainer {
                     curr.setItem((Item) window.receiveData(-pivot));
                     curr.setOffset(pre.getOffset() + itemBoxFactory.getBoxHeight());
                     internalContainer.addFirst(curr);
+                    shiftNeeded = true;
                 }
                 else{
-                    current = internalContainer.get(pivot);
+                    if(shiftNeeded && dx > -itemBoxFactory.getBoxHeight()) {
+                        centerItem();
+                    }
                     break;
                 }
             }
@@ -257,9 +272,6 @@ public class ItemContainer implements IContainer {
         float speedAbs = Math.abs(dy);
         if (speedAbs < minSpeed){
             return;
-        }
-        if (speedAbs > maxSpeed){
-            dy = maxSpeed * Math.signum(dy);
         }
         int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
         scroller.fling(0, (int) current.getOffset(),    // x, y
@@ -303,6 +315,11 @@ public class ItemContainer implements IContainer {
     public void setOrigin(float x, float y) {
         originX = x;
         originY = y;
+    }
+
+    @Override
+    public void setOnItemChangedListener(OnItemChangedListener listener) {
+        this.listener = listener;
     }
 
     @Override

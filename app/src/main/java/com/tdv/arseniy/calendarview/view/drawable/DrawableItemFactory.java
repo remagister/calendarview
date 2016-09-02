@@ -3,7 +3,8 @@ package com.tdv.arseniy.calendarview.view.drawable;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.util.Log;
+
+import java.util.Locale;
 
 /**
  * Created by arseniy on 28.08.16.
@@ -12,21 +13,25 @@ import android.util.Log;
 public class DrawableItemFactory {
 
     private static class ItemImpl implements Item {
-        private String data = "";
+        private String string = "";
+        private Object rawData;
         private Rect bounds = new Rect();
         private Paint textPaint;
+        private String format;
 
-        private ItemImpl(String data) {
-            this.data = data;
+        private ItemImpl(Object data, String format) {
+            rawData = data;
+            this.format = format;
+            this.string = String.format(Locale.ENGLISH, format, rawData);
         }
 
         private void measureBounds(){
-            textPaint.getTextBounds(data, 0, data.length(), bounds);
+            textPaint.getTextBounds(string, 0, string.length(), bounds);
         }
 
         @Override
         public void draw(Canvas canvas, float x, float y) {
-            canvas.drawText(data, x, y, textPaint);
+            canvas.drawText(string, x, y, textPaint);
         }
 
         @Override
@@ -52,12 +57,13 @@ public class DrawableItemFactory {
 
         @Override
         public Object getData() {
-            return data;
+            return rawData;
         }
 
         @Override
         public void setData(Object object) {
-            data = (String) object;
+            rawData = object;
+            this.string = String.format(Locale.ENGLISH, format, rawData);
             measureBounds();
         }
     }
@@ -67,8 +73,14 @@ public class DrawableItemFactory {
         textPaint = fontPaint;
     }
 
+    public Item create(Object data, String format){
+        Item ret = new ItemImpl(data, format);
+        ret.setPaint(textPaint);
+        return ret;
+    }
+
     public Item create(String data){
-        Item ret = new ItemImpl(data);
+        Item ret = new ItemImpl(data, "%s");
         ret.setPaint(textPaint);
         return ret;
     }
