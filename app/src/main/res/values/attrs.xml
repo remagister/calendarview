@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="com.tdv.arseniy.calendarview.CalendarView">
-
+    <declare-styleable name="ScrollPicker">
+        <attr name="textSize" format="integer" />
+        <attr name="textColor" format="color" />
+        <attr name="backgroundColor" format="color" />
+        <attr name="day" format="integer" />
+        <attr name="year" format="integer" />
+        <attr name="month" format="enum">
+            <enum name="January" value="0" />
+            <enum name="February" value="1" />
+            <enum name="March" value="2" />
+            <enum name="April" value="3" />
+            <enum name="May" value="4" />
+            <enum name="June" value="5" />
+            <enum name="July" value="6" />
+            <enum name="August" value="7" />
+            <enum name="September" value="8" />
+            <enum name="October" value="9" />
+            <enum name="November" value="10" />
+            <enum name="December" value="11" />
+        </attr>
     </declare-styleable>
 </resources>

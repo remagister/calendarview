@@ -1,6 +1,7 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.graphics.Canvas;
+import android.util.Log;
 import android.widget.Scroller;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
@@ -31,10 +32,24 @@ public class ItemContainer implements IContainer {
         private class Box implements ItemBox{
             float offset;
             Item item;
+            float localX;
+            float localY;
 
             Box(float offset, Item item) {
                 this.offset = offset;
                 this.item = item;
+                init();
+            }
+
+            void initX(){
+                localX = originX + (boxWidth - item.measureWidth()) / 2f;
+            }
+            void initY(){
+                localY = originY + offset + (boxHeight - item.measureHeight()) / 2f;
+            }
+            void init(){
+                initX();
+                initY();
             }
 
             @Override
@@ -45,11 +60,13 @@ public class ItemContainer implements IContainer {
             @Override
             public void setOffset(float offset) {
                 this.offset = offset;
+                initY();
             }
 
             @Override
             public void move(float dx) {
                 offset += dx;
+                initY();
             }
 
             @Override
@@ -60,6 +77,7 @@ public class ItemContainer implements IContainer {
             @Override
             public void setItem(Item item) {
                 this.item = item;
+                init();
             }
 
             @Override
@@ -74,7 +92,7 @@ public class ItemContainer implements IContainer {
 
             @Override
             public void draw(Canvas canvas) {
-                item.draw(canvas, originX + padding, originY + offset + padding);
+                item.draw(canvas, localX, localY);
             }
         }
 
@@ -158,10 +176,9 @@ public class ItemContainer implements IContainer {
         }
     }
 
-    private static final int VISIBLE_ITEMS = 7;
+    private static final int VISIBLE_ITEMS = 5;
     private static final int PREPARED_ITEMS = 2;
-    public static final float MAX_SPEED = 5000;
-    public static final float MIN_SPEED = 200;
+    private static final int MAX_SPEED_MULTIPLIER = 50;
     private IDataWindow window;
     private LinkedList<ItemBox> internalContainer = new LinkedList<>();
     private ItemBoxFactory itemBoxFactory;
@@ -171,13 +188,14 @@ public class ItemContainer implements IContainer {
     private float height;
     private float originX = 0f;
     private float originY = 0f;
-    private float centerOffset;
+    private float maxSpeed;
+    private float minSpeed;
 
-    public ItemContainer(float maxItemWidth, float maxItemHeight) {
+    ItemContainer(float maxItemWidth, float maxItemHeight) {
         itemBoxFactory = new ItemBoxFactory(maxItemWidth, maxItemHeight);
     }
 
-    public ItemContainer(IDataWindow window, float maxItemWidth, float maxItemHeight) {
+    ItemContainer(IDataWindow window, float maxItemWidth, float maxItemHeight) {
         this(maxItemWidth, maxItemHeight);
         this.window = window;
         refresh();
@@ -236,23 +254,19 @@ public class ItemContainer implements IContainer {
 
     @Override
     public void fling(float dy, Scroller scroller) {
-        if(Math.abs(dy) < MIN_SPEED){
-            // not actually used yet
-            scroller.fling(0, (int) current.getOffset(),    // x, y
-                    0, (int) dy,                            // vx, vy
-                    0, 0,                                   // minx maxx
-                    (int) current.getOffset() - (int) itemBoxFactory.getBoxHeight()*50,
-                    (int) current.getOffset() + (int) itemBoxFactory.getBoxHeight()*50);
+        float speedAbs = Math.abs(dy);
+        if (speedAbs < minSpeed){
             return;
         }
-        if(Math.abs(dy) > MAX_SPEED){
-            dy = MAX_SPEED * Math.signum(dy);
+        if (speedAbs > maxSpeed){
+            dy = maxSpeed * Math.signum(dy);
         }
+        int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
         scroller.fling(0, (int) current.getOffset(),    // x, y
                 0, (int) dy,                            // vx, vy
                 0, 0,                                   // minx maxx
-                (int) current.getOffset() - (int) itemBoxFactory.getBoxHeight()*50,
-                (int) current.getOffset() + (int) itemBoxFactory.getBoxHeight()*50);
+                stopPoint - (int) speedAbs,
+                (int) current.getOffset() * 2 + (int) speedAbs - stopPoint);
     }
 
     @Override
@@ -274,6 +288,8 @@ public class ItemContainer implements IContainer {
     @Override
     public void refresh() {
         height = visibleItems * itemBoxFactory.getBoxHeight();
+        minSpeed = itemBoxFactory.getBoxHeight();
+        maxSpeed = minSpeed * MAX_SPEED_MULTIPLIER;
         internalContainer.clear();
         pivot = (visibleItems + PREPARED_ITEMS) / 2;
         itemBoxFactory.setOriginIndex(- pivot + PREPARED_ITEMS/2);
@@ -281,7 +297,6 @@ public class ItemContainer implements IContainer {
             internalContainer.addFirst(itemBoxFactory.build(window, index));
         }
         current = internalContainer.get(pivot);
-        centerOffset = itemBoxFactory.getOffsetAtIndex(0) + itemBoxFactory.getBoxHeight() / 2f;
     }
 
     @Override

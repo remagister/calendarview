@@ -10,9 +10,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        ScrollPicker view = new ScrollPicker(this);
         //datePicker.setAtmospheric(true);
        // datePicker.setCurved(true);
-        setContentView(view);
+        setContentView(R.layout.activity_main);
     }
 }

@@ -1,6 +1,7 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
@@ -10,6 +11,9 @@ import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.ScrollerCompat;
+import android.text.format.DateFormat;
+import android.text.format.DateUtils;
+import android.text.style.TtsSpan;
 import android.util.AttributeSet;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -17,16 +21,75 @@ import android.view.View;
 import android.widget.OverScroller;
 import android.widget.Scroller;
 
+import com.tdv.arseniy.calendarview.R;
 import com.tdv.arseniy.calendarview.view.drawable.DrawableItemFactory;
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.provider.IDataWindow;
 import com.tdv.arseniy.calendarview.view.provider.NumericWindow;
+
+import java.lang.reflect.Type;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * Created by arseniy on 27.08.16.
  */
 
 public class ScrollPicker extends View {
+
+    private class Attributes {
+        float textSize;
+        int textColor;
+        int backgroundColor;
+        int day;
+        int month;
+        int year;
+
+        public Attributes(){
+            textSize = 64;
+            textColor = Color.BLACK;
+            backgroundColor = Color.TRANSPARENT;
+            Calendar current = Calendar.getInstance();
+            day = current.get(Calendar.DAY_OF_MONTH) + 1;
+            year = current.get(Calendar.YEAR);
+            month = current.get(Calendar.MONTH) + 1;
+        }
+
+        public Attributes(TypedArray array) {
+            textSize = array.getInt(R.styleable.ScrollPicker_textSize, 64);
+            textColor = array.getColor(R.styleable.ScrollPicker_textColor, Color.BLACK);
+            backgroundColor = array.getColor(R.styleable.ScrollPicker_backgroundColor, Color.TRANSPARENT);
+            Calendar current = Calendar.getInstance();
+            day = array.getInt(R.styleable.ScrollPicker_day, current.get(Calendar.DAY_OF_MONTH) + 1);
+            year = array.getInt(R.styleable.ScrollPicker_year, current.get(Calendar.YEAR));
+            month = array.getInt(R.styleable.ScrollPicker_month, current.get(Calendar.MONTH)) + 1;
+        }
+
+        public float getTextSize() {
+            return textSize;
+        }
+
+        public int getTextColor() {
+            return textColor;
+        }
+
+        public int getBackgroundColor() {
+            return backgroundColor;
+        }
+
+        public int getDay() {
+            return day;
+        }
+
+        public int getMonth() {
+            return month;
+        }
+
+        public int getYear() {
+            return year;
+        }
+    }
 
     private class Detector extends GestureDetector.SimpleOnGestureListener{
 
@@ -49,6 +112,14 @@ public class ScrollPicker extends View {
         }
     }
 
+    // ============== internal members ==============
+
+    private Scroller scroller;
+    private IContainer container;
+    private GestureDetector detector;
+    private Rect renderTarget = new Rect();
+    private Attributes attributes;
+
     public ScrollPicker(Context context) {
         super(context);
         init();
@@ -56,24 +127,30 @@ public class ScrollPicker extends View {
 
     public ScrollPicker(Context context, AttributeSet attrs) {
         super(context, attrs);
+        TypedArray array = null;
+        try {
+            array = getContext().obtainStyledAttributes(attrs, R.styleable.ScrollPicker, 0, 0);
+            attributes = new Attributes(array);
+        }
+        finally {
+            if(array != null) {
+                array.recycle();
+            }
+        }
+
         init();
     }
 
-    private Scroller scroller;
-    private IContainer container;
-    private GestureDetector detector;
-    private Rect renderTarget = new Rect();
-    private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
     private void init(){
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        textPaint.setColor(attributes.getTextColor());
         textPaint.setTypeface(Typeface.DEFAULT);
-        textPaint.setTextSize(72);
+        textPaint.setTextSize(attributes.getTextSize());
         DrawableItemFactory factory = new DrawableItemFactory(textPaint);
-        Rect bounds = factory.getSampleBounds(new Rect(), "32");
-        NumericWindow window = new NumericWindow(1, 31, factory);
-        window.setPivot(5);
-        window.setFormat("%02d");
+        Rect bounds = factory.getSampleBounds(new Rect(), "2222");
+        NumericWindow window = new NumericWindow(1900, 2100, factory);
+        window.setPivot(attributes.getYear());
+        window.setFormat("%04d");
         container = new ItemContainer(window, bounds.width(),bounds.height());
         detector = new GestureDetector(getContext(), new Detector());
         scroller = new Scroller(getContext());
