@@ -223,17 +223,12 @@ public class ItemContainer implements IContainer {
     }
 
     private void centerItem() {
-        final float indexOffset = itemBoxFactory.getOffsetAtIndex(0);
-
-        if (current.getOffset() > indexOffset + itemBoxFactory.boxHeight ||
-                current.getOffset() < indexOffset - itemBoxFactory.boxHeight) {
             Object oldData = current.getItem().getData();
             current = internalContainer.get(pivot);
 
             if (listener != null) {
                 listener.onItemChanged(this, oldData, current.getItem().getData());
             }
-        }
     }
 
     @Override
@@ -302,10 +297,12 @@ public class ItemContainer implements IContainer {
             scroller.abortAnimation();
             return;
         }
+
         if (speedAbs > maxSpeed) {
             dy = maxSpeed * Math.signum(dy);
         }
-        int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
+
+        final int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
         scroller.fling(0, (int) current.getOffset(),    // x, y
                 0, (int) dy,                            // vx, vy
                 0, 0,                                   // minx maxx

@@ -68,6 +68,8 @@ public class ScrollPicker extends View {
                 }
             }
             scroller.forceFinished(true);
+            scroller.fling(0, 0, 0, 0, 0, 0, 0, 0);
+            scroller.computeScrollOffset();
             return true;
         }
     }
