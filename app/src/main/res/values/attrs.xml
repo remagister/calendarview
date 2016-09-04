@@ -2,10 +2,15 @@
 <resources>
     <declare-styleable name="ScrollPicker">
         <attr name="textSize" format="integer" />
+        <attr name="labelSize" format="integer" />
+
         <attr name="textColor" format="color" />
         <attr name="backgroundColor" format="color" />
+        <attr name="labelColor" format="color" />
+
         <attr name="spacing" format="dimension" />
-        <attr name="labelSize" format="integer" />
+        <attr name="visibleItems" format="integer" />
+
         <attr name="day" format="integer" />
         <attr name="year" format="integer" />
         <attr name="month" format="enum">

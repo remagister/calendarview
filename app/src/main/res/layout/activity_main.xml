@@ -14,9 +14,9 @@
     <com.tdv.arseniy.calendarview.view.ScrollPicker
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        custom:year="2010"
-        custom:day="1"
-        custom:month="November"
-        custom:textSize="60"
+        custom:textColor="@color/colorPrimaryDark"
+        custom:labelSize="40"
+        custom:visibleItems="5"
+        custom:textSize="70"
         android:id="@+id/scrollPicker" />
 </RelativeLayout>

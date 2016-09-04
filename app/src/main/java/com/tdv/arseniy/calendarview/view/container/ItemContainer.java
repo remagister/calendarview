@@ -1,6 +1,9 @@
 package com.tdv.arseniy.calendarview.view.container;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
 import android.widget.Scroller;
 
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
@@ -39,6 +42,7 @@ public class ItemContainer implements IContainer {
             Item item;
             float localX;
             float localY;
+            int fading;
 
             Box(float offset, Item item) {
                 this.offset = offset;
@@ -51,7 +55,10 @@ public class ItemContainer implements IContainer {
             }
 
             void initY() {
-                localY = originY + offset + (boxHeight - item.measureHeight()) / 2f;
+                localY = originY + offset + (boxHeight - item.measureHeight()) / 2f + item.measureHeight();
+                final float normalized = (float) Math.PI * (offset + halfHeight) / height;
+                fading = normalized > Math.PI || normalized < 0 ? 0 : (int) (Math.sin(normalized) * 255.0);
+
             }
 
             void init() {
@@ -104,41 +111,35 @@ public class ItemContainer implements IContainer {
 
             @Override
             public void draw(Canvas canvas) {
+                item.getPaint().setAlpha(fading);
                 item.draw(canvas, localX, localY);
             }
         }
+
+        private static final float SPACING_PERCENT = .8f;
+        private static final float PADDING_PERCENT = .2f;
 
         private float maxItemWidth;
         private float maxItemHeight;
         private float boxHeight;
         private float boxWidth;
-        private float padding;
-        private int originIndex;
         private float halfHeight;
+        private int originIndex;
 
         ItemBoxFactory(float maxItemWidth, float maxItemHeight) {
-            this(maxItemWidth, maxItemHeight, 20f);
+            this(maxItemWidth, maxItemHeight, 0);
         }
 
-        public ItemBoxFactory(float maxItemWidth, float maxItemHeight, int originIndex) {
-            this(maxItemWidth, maxItemHeight, 20f, originIndex);
-        }
-
-        ItemBoxFactory(float maxItemWidth, float maxItemHeight, float padding) {
-            this(maxItemWidth, maxItemHeight, padding, 0);
-        }
-
-        ItemBoxFactory(float maxItemWidth, float maxItemHeight, float padding, int originIndex) {
+        ItemBoxFactory(float maxItemWidth, float maxItemHeight, int originIndex) {
             this.maxItemWidth = maxItemWidth;
             this.maxItemHeight = maxItemHeight;
-            this.padding = padding;
             this.originIndex = originIndex;
             init();
         }
 
         private void init() {
-            boxHeight = maxItemHeight + 2f * padding;
-            boxWidth = maxItemWidth + 2f * padding;
+            boxHeight = maxItemHeight * (1 + SPACING_PERCENT);
+            boxWidth = maxItemWidth * (1 + PADDING_PERCENT);
             halfHeight = boxHeight / 2f;
         }
 
@@ -165,7 +166,7 @@ public class ItemContainer implements IContainer {
         }
 
         ItemBox build(IDataWindow window, int index) {
-            return new Box(boxHeight * (index - originIndex) + halfHeight, (Item) window.receiveData(-index));
+            return new Box(boxHeight * (index - originIndex), (Item) window.receiveData(-index));
         }
     }
 
@@ -188,7 +189,7 @@ public class ItemContainer implements IContainer {
         }
     }
 
-    private static final int VISIBLE_ITEMS = 5;
+    private static final int VISIBLE_ITEMS = 3;
     private static final int PREPARED_ITEMS = 2;
     private static final int MAX_SPEED_MULTIPLIER = 70;
     private IDataWindow window;
@@ -204,12 +205,13 @@ public class ItemContainer implements IContainer {
     private float minSpeed;
     private OnItemChangedListener listener;
 
-    public ItemContainer(float maxItemWidth, float maxItemHeight) {
+    public ItemContainer(float maxItemWidth, float maxItemHeight, int visibleItems) {
         itemBoxFactory = new ItemBoxFactory(maxItemWidth, maxItemHeight);
+        this.visibleItems = visibleItems;
     }
 
     public ItemContainer(IDataWindow window, float maxItemWidth, float maxItemHeight) {
-        this(maxItemWidth, maxItemHeight);
+        this(maxItemWidth, maxItemHeight, VISIBLE_ITEMS);
         this.window = window;
         refresh();
     }
@@ -221,10 +223,16 @@ public class ItemContainer implements IContainer {
     }
 
     private void centerItem() {
-        Object oldData = current.getItem().getData();
-        current = internalContainer.get(pivot);
-        if (listener != null) {
-            listener.onItemChanged(this, oldData, current.getItem().getData());
+        final float indexOffset = itemBoxFactory.getOffsetAtIndex(0);
+
+        if (current.getOffset() > indexOffset + itemBoxFactory.boxHeight ||
+                current.getOffset() < indexOffset - itemBoxFactory.boxHeight) {
+            Object oldData = current.getItem().getData();
+            current = internalContainer.get(pivot);
+
+            if (listener != null) {
+                listener.onItemChanged(this, oldData, current.getItem().getData());
+            }
         }
     }
 
@@ -244,6 +252,7 @@ public class ItemContainer implements IContainer {
         if (dx > 0f) {
             while (true) {
                 curr = internalContainer.getFirst();
+
                 if (curr.getOffset() > itemBoxFactory.getOffsetAtIndex(pivot) + itemBoxFactory.getBoxHeight()) {
                     window.shift(ShiftDirection.FORWARD);
                     pre = internalContainer.getLast();
@@ -252,16 +261,20 @@ public class ItemContainer implements IContainer {
                     curr.setOffset(pre.getOffset() - itemBoxFactory.getBoxHeight());
                     internalContainer.addLast(curr);
                     shiftNeeded = true;
+
                 } else {
+
                     if (shiftNeeded && dx < itemBoxFactory.getBoxHeight()) {
                         centerItem();
                     }
+
                     break;
                 }
             }
         } else {
             while (true) {
                 curr = internalContainer.getLast();
+
                 if (curr.getOffset() < itemBoxFactory.getOffsetAtIndex(-pivot)) {
                     window.shift(ShiftDirection.BACKWARD);
                     pre = internalContainer.getFirst();
@@ -271,9 +284,11 @@ public class ItemContainer implements IContainer {
                     internalContainer.addFirst(curr);
                     shiftNeeded = true;
                 } else {
+
                     if (shiftNeeded && dx > -itemBoxFactory.getBoxHeight()) {
                         centerItem();
                     }
+
                     break;
                 }
             }
@@ -284,9 +299,10 @@ public class ItemContainer implements IContainer {
     public void fling(float dy, Scroller scroller) {
         float speedAbs = Math.abs(dy);
         if (speedAbs < minSpeed) {
+            scroller.abortAnimation();
             return;
         }
-        if(speedAbs > maxSpeed){
+        if (speedAbs > maxSpeed) {
             dy = maxSpeed * Math.signum(dy);
         }
         int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
@@ -315,7 +331,7 @@ public class ItemContainer implements IContainer {
 
     @Override
     public void refresh() {
-        height = visibleItems * itemBoxFactory.getBoxHeight();
+        height = visibleItems * itemBoxFactory.boxHeight;
         minSpeed = itemBoxFactory.getBoxHeight();
         maxSpeed = minSpeed * MAX_SPEED_MULTIPLIER;
         internalContainer.clear();
@@ -331,7 +347,7 @@ public class ItemContainer implements IContainer {
     public void setOrigin(float x, float y) {
         originX = x;
         originY = y;
-        for (ItemBox box: internalContainer) {
+        for (ItemBox box : internalContainer) {
             box.refresh();
         }
     }
@@ -347,6 +363,15 @@ public class ItemContainer implements IContainer {
                 x < (originX + itemBoxFactory.boxWidth) &&
                 (y > originY) &&
                 y < (originY + height);
+    }
+
+    @Override
+    public void setVisibleItems(int visibleItems) {
+        if (visibleItems % 2 == 0) {
+            throw new IllegalArgumentException("Illegal argument: visibleItems has to be odd.");
+        }
+        this.visibleItems = visibleItems;
+        refresh();
     }
 
     @Override

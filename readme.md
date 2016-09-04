@@ -1,6 +1,6 @@
 #Scrollable calendar view
 
-### Scrolling introduced
+### Scrolling, fading and labels introduced
 ![Scroll view](https://github.com/remagister/calendarview/blob/master/img/scroll.gif)
 
 

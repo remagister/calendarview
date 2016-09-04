@@ -24,4 +24,5 @@ public interface IContainer extends IMeasurable, Iterable<IDrawable>{
     void setOrigin(float x, float y);
     void setOnItemChangedListener(OnItemChangedListener listener);
     boolean hit(float x, float y);
+    void setVisibleItems(int visibleItems);
 }

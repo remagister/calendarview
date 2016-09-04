@@ -23,8 +23,20 @@ public class NumericWindow implements IDataWindow {
         pivot = minimal;
     }
 
+    public void setMaximal(int maximal) {
+        this.maximal = maximal;
+        if (pivot > maximal) {
+            pivot = maximal;
+        }
+    }
+
     public void setPivot(int index) {
         pivot = index;
+        if (pivot > maximal) {
+            pivot = maximal;
+        } else if (pivot < minimal) {
+            pivot = minimal;
+        }
     }
 
     public void setFormat(String format) {
