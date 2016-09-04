@@ -7,7 +7,6 @@ import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.drawable.IMeasurable;
 import com.tdv.arseniy.calendarview.view.drawable.Item;
 import com.tdv.arseniy.calendarview.view.provider.IDataWindow;
-import com.tdv.arseniy.calendarview.view.provider.ShiftDirection;
 
 /**
  * Created by arseniy on 30.08.16.
@@ -24,4 +23,5 @@ public interface IContainer extends IMeasurable, Iterable<IDrawable>{
     void refresh();
     void setOrigin(float x, float y);
     void setOnItemChangedListener(OnItemChangedListener listener);
+    boolean hit(float x, float y);
 }

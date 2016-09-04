@@ -18,17 +18,23 @@ import java.util.LinkedList;
 
 public class ItemContainer implements IContainer {
 
-    private interface ItemBox extends IMeasurable, IDrawable{
+    private interface ItemBox extends IMeasurable, IDrawable {
         float getOffset();
+
         void setOffset(float offset);
+
         void move(float dx);
+
         Item getItem();
+
         void setItem(Item item);
+
+        void refresh();
     }
 
-    private class ItemBoxFactory{
+    private class ItemBoxFactory {
 
-        private class Box implements ItemBox{
+        private class Box implements ItemBox {
             float offset;
             Item item;
             float localX;
@@ -40,13 +46,15 @@ public class ItemContainer implements IContainer {
                 init();
             }
 
-            void initX(){
+            void initX() {
                 localX = originX + (boxWidth - item.measureWidth()) / 2f;
             }
-            void initY(){
+
+            void initY() {
                 localY = originY + offset + (boxHeight - item.measureHeight()) / 2f;
             }
-            void init(){
+
+            void init() {
                 initX();
                 initY();
             }
@@ -76,6 +84,11 @@ public class ItemContainer implements IContainer {
             @Override
             public void setItem(Item item) {
                 this.item = item;
+                init();
+            }
+
+            @Override
+            public void refresh() {
                 init();
             }
 
@@ -123,13 +136,13 @@ public class ItemContainer implements IContainer {
             init();
         }
 
-        private void init(){
-            boxHeight = maxItemHeight + 2f*padding;
-            boxWidth = maxItemWidth + 2f*padding;
+        private void init() {
+            boxHeight = maxItemHeight + 2f * padding;
+            boxWidth = maxItemWidth + 2f * padding;
             halfHeight = boxHeight / 2f;
         }
 
-        void setMaxItemSize(float width, float height){
+        void setMaxItemSize(float width, float height) {
             this.maxItemWidth = width;
             this.maxItemHeight = height;
             init();
@@ -147,16 +160,16 @@ public class ItemContainer implements IContainer {
             this.originIndex = originIndex;
         }
 
-        float getOffsetAtIndex(int index){
+        float getOffsetAtIndex(int index) {
             return boxHeight * (index - originIndex);
         }
 
-        ItemBox build(IDataWindow window, int index){
+        ItemBox build(IDataWindow window, int index) {
             return new Box(boxHeight * (index - originIndex) + halfHeight, (Item) window.receiveData(-index));
         }
     }
 
-    private class IteratorImpl implements java.util.Iterator<IDrawable>{
+    private class IteratorImpl implements java.util.Iterator<IDrawable> {
 
         private java.util.Iterator<ItemBox> internalIterator;
 
@@ -177,7 +190,7 @@ public class ItemContainer implements IContainer {
 
     private static final int VISIBLE_ITEMS = 5;
     private static final int PREPARED_ITEMS = 2;
-    private static final int MAX_SPEED_MULTIPLIER = 50;
+    private static final int MAX_SPEED_MULTIPLIER = 70;
     private IDataWindow window;
     private LinkedList<ItemBox> internalContainer = new LinkedList<>();
     private ItemBoxFactory itemBoxFactory;
@@ -207,25 +220,28 @@ public class ItemContainer implements IContainer {
         refresh();
     }
 
-    private void centerItem(){
+    private void centerItem() {
         Object oldData = current.getItem().getData();
         current = internalContainer.get(pivot);
-        if(listener != null){
+        if (listener != null) {
             listener.onItemChanged(this, oldData, current.getItem().getData());
         }
     }
 
     @Override
     public void scroll(float dx) {
-        if(dx == 0f) {
+        if (dx == 0f) {
             return;
         }
-        for (ItemBox box: internalContainer) {
+
+        for (ItemBox box : internalContainer) {
             box.move(dx);
         }
+
         ItemBox pre, curr;
         boolean shiftNeeded = false;
-        if(dx > 0f){
+
+        if (dx > 0f) {
             while (true) {
                 curr = internalContainer.getFirst();
                 if (curr.getOffset() > itemBoxFactory.getOffsetAtIndex(pivot) + itemBoxFactory.getBoxHeight()) {
@@ -236,16 +252,14 @@ public class ItemContainer implements IContainer {
                     curr.setOffset(pre.getOffset() - itemBoxFactory.getBoxHeight());
                     internalContainer.addLast(curr);
                     shiftNeeded = true;
-                }
-                else{
-                    if(shiftNeeded && dx < itemBoxFactory.getBoxHeight()) {
+                } else {
+                    if (shiftNeeded && dx < itemBoxFactory.getBoxHeight()) {
                         centerItem();
                     }
                     break;
                 }
             }
-        }
-        else{
+        } else {
             while (true) {
                 curr = internalContainer.getLast();
                 if (curr.getOffset() < itemBoxFactory.getOffsetAtIndex(-pivot)) {
@@ -256,9 +270,8 @@ public class ItemContainer implements IContainer {
                     curr.setOffset(pre.getOffset() + itemBoxFactory.getBoxHeight());
                     internalContainer.addFirst(curr);
                     shiftNeeded = true;
-                }
-                else{
-                    if(shiftNeeded && dx > -itemBoxFactory.getBoxHeight()) {
+                } else {
+                    if (shiftNeeded && dx > -itemBoxFactory.getBoxHeight()) {
                         centerItem();
                     }
                     break;
@@ -270,8 +283,11 @@ public class ItemContainer implements IContainer {
     @Override
     public void fling(float dy, Scroller scroller) {
         float speedAbs = Math.abs(dy);
-        if (speedAbs < minSpeed){
+        if (speedAbs < minSpeed) {
             return;
+        }
+        if(speedAbs > maxSpeed){
+            dy = maxSpeed * Math.signum(dy);
         }
         int stopPoint = (int) itemBoxFactory.getOffsetAtIndex(0);
         scroller.fling(0, (int) current.getOffset(),    // x, y
@@ -304,8 +320,8 @@ public class ItemContainer implements IContainer {
         maxSpeed = minSpeed * MAX_SPEED_MULTIPLIER;
         internalContainer.clear();
         pivot = (visibleItems + PREPARED_ITEMS) / 2;
-        itemBoxFactory.setOriginIndex(- pivot + PREPARED_ITEMS/2);
-        for(int index = -pivot; index <= pivot; ++index){
+        itemBoxFactory.setOriginIndex(-pivot + PREPARED_ITEMS / 2);
+        for (int index = -pivot; index <= pivot; ++index) {
             internalContainer.addFirst(itemBoxFactory.build(window, index));
         }
         current = internalContainer.get(pivot);
@@ -315,11 +331,22 @@ public class ItemContainer implements IContainer {
     public void setOrigin(float x, float y) {
         originX = x;
         originY = y;
+        for (ItemBox box: internalContainer) {
+            box.refresh();
+        }
     }
 
     @Override
     public void setOnItemChangedListener(OnItemChangedListener listener) {
         this.listener = listener;
+    }
+
+    @Override
+    public boolean hit(float x, float y) {
+        return (x > originX) &&
+                x < (originX + itemBoxFactory.boxWidth) &&
+                (y > originY) &&
+                y < (originY + height);
     }
 
     @Override

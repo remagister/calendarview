@@ -26,6 +26,7 @@ public class DrawableItemFactory {
         }
 
         private void measureBounds(){
+            // TODO: 02.09.16 try to draw bounding rect
             textPaint.getTextBounds(string, 0, string.length(), bounds);
         }
 
@@ -69,6 +70,7 @@ public class DrawableItemFactory {
     }
 
     private Paint textPaint;
+
     public DrawableItemFactory(Paint fontPaint) {
         textPaint = fontPaint;
     }

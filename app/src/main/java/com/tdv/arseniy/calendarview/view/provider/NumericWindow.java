@@ -23,7 +23,7 @@ public class NumericWindow implements IDataWindow {
         pivot = minimal;
     }
 
-    public void setPivot(int index){
+    public void setPivot(int index) {
         pivot = index;
     }
 
@@ -34,9 +34,9 @@ public class NumericWindow implements IDataWindow {
     @Override
     public Object receiveData(int i) {
         int ret = pivot + i;
-        if(ret < minimal){
+        if (ret < minimal) {
             ret += maximal - minimal + 1;
-        } else if (ret > maximal){
+        } else if (ret > maximal) {
             ret -= maximal - minimal + 1;
         }
         return factory.create(ret, format);
@@ -44,15 +44,15 @@ public class NumericWindow implements IDataWindow {
 
     @Override
     public void shift(ShiftDirection direction) {
-        switch (direction){
-            case BACKWARD:{
-                if(--pivot < minimal){
+        switch (direction) {
+            case BACKWARD: {
+                if (--pivot < minimal) {
                     pivot = maximal;
                 }
                 break;
             }
-            case FORWARD:{
-                if(++pivot > maximal){
+            case FORWARD: {
+                if (++pivot > maximal) {
                     pivot = minimal;
                 }
                 break;
@@ -62,17 +62,17 @@ public class NumericWindow implements IDataWindow {
 
     @Override
     public void shift(ShiftDirection direction, int by) {
-        switch (direction){
-            case BACKWARD:{
+        switch (direction) {
+            case BACKWARD: {
                 pivot -= by;
-                if(pivot < minimal){
+                if (pivot < minimal) {
                     pivot = maximal - (minimal - pivot) + 1;
                 }
                 break;
             }
-            case FORWARD:{
+            case FORWARD: {
                 pivot += by;
-                if(pivot > maximal){
+                if (pivot > maximal) {
                     pivot = minimal + (pivot - maximal) - 1;
                 }
                 break;

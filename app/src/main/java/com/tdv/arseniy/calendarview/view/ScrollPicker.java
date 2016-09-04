@@ -1,17 +1,13 @@
 package com.tdv.arseniy.calendarview.view;
 
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Rect;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,9 +20,11 @@ import com.tdv.arseniy.calendarview.view.container.OnItemChangedListener;
 import com.tdv.arseniy.calendarview.view.drawable.DrawableItemFactory;
 import com.tdv.arseniy.calendarview.view.drawable.IDrawable;
 import com.tdv.arseniy.calendarview.view.provider.NumericWindow;
+import com.tdv.arseniy.calendarview.view.util.AttributeBind;
+import com.tdv.arseniy.calendarview.view.util.AttributeType;
+import com.tdv.arseniy.calendarview.view.util.AttributeUtil;
 
 import java.util.Calendar;
-import java.util.Locale;
 
 /**
  * Created by arseniy on 27.08.16.
@@ -34,87 +32,37 @@ import java.util.Locale;
 
 public class ScrollPicker extends View {
 
-    private class Attributes {
-        float textSize;
-        int textColor;
-        int backgroundColor;
-        int day;
-        int month;
-        int year;
+    private class Detector extends GestureDetector.SimpleOnGestureListener {
 
-        public Attributes(){
-            textSize = 64;
-            textColor = Color.BLACK;
-            backgroundColor = Color.TRANSPARENT;
-            Calendar current = Calendar.getInstance();
-            day = current.get(Calendar.DAY_OF_MONTH) + 1;
-            year = current.get(Calendar.YEAR);
-            month = current.get(Calendar.MONTH) + 1;
-        }
-
-        public Attributes(TypedArray array) {
-            textSize = array.getInt(R.styleable.ScrollPicker_textSize, 64);
-            textColor = array.getColor(R.styleable.ScrollPicker_textColor, Color.BLACK);
-            backgroundColor = array.getColor(R.styleable.ScrollPicker_backgroundColor, Color.TRANSPARENT);
-            Calendar current = Calendar.getInstance();
-            day = array.getInt(R.styleable.ScrollPicker_day, current.get(Calendar.DAY_OF_MONTH) + 1);
-            year = array.getInt(R.styleable.ScrollPicker_year, current.get(Calendar.YEAR));
-            month = array.getInt(R.styleable.ScrollPicker_month, current.get(Calendar.MONTH)) + 1;
-        }
-
-        float getTextSize() {
-            return textSize;
-        }
-
-        int getTextColor() {
-            return textColor;
-        }
-
-        int getBackgroundColor() {
-            return backgroundColor;
-        }
-
-        int getDay() {
-            return day;
-        }
-
-        int getMonth() {
-            return month;
-        }
-
-        int getYear() {
-            return year;
-        }
-
-        void setDay(int day) {
-            this.day = day;
-        }
-
-        void setMonth(int month) {
-            this.month = month;
-        }
-
-        void setYear(int year) {
-            this.year = year;
-        }
-    }
-
-    private class Detector extends GestureDetector.SimpleOnGestureListener{
+        Scroller scroller;
+        IContainer container;
 
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            year.fling(velocityY, scroller);
+            container.fling(velocityY, scroller);
             return true;
         }
 
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            year.scroll(-distanceY);
+            container.scroll(-distanceY);
             return true;
         }
 
         @Override
         public boolean onDown(MotionEvent e) {
+            if (year.hit(e.getX(), e.getY())) {
+                scroller = yearScroller;
+                container = year;
+            } else {
+                if (month.hit(e.getX(), e.getY())) {
+                    scroller = monthScroller;
+                    container = month;
+                } else {
+                    scroller = dayScroller;
+                    container = day;
+                }
+            }
             scroller.forceFinished(true);
             return true;
         }
@@ -122,60 +70,98 @@ public class ScrollPicker extends View {
 
     // ============== internal members ==============
 
-    private Scroller scroller;
+    public static final int MIN_YEAR = 1900;
+    public static final int MAX_YEAR = 2100;
+
+    @AttributeBind(id = R.styleable.ScrollPicker_textSize, type = AttributeType.INTEGER)
+    int textSize = 64;
+    @AttributeBind(id = R.styleable.ScrollPicker_textColor, type = AttributeType.COLOR)
+    int textColor = Color.BLACK;
+    @AttributeBind(id = R.styleable.ScrollPicker_backgroundColor, type = AttributeType.COLOR)
+    int backgroundColor = Color.TRANSPARENT;
+    @AttributeBind(id = R.styleable.ScrollPicker_day, type = AttributeType.INTEGER)
+    int mDay;
+    @AttributeBind(id = R.styleable.ScrollPicker_month, type = AttributeType.INTEGER)
+    int mMonth;
+    @AttributeBind(id = R.styleable.ScrollPicker_year, type = AttributeType.INTEGER)
+    int mYear;
+    @AttributeBind(id = R.styleable.ScrollPicker_spacing, type = AttributeType.DIMENSION)
+    int spacing = 10;
+    @AttributeBind(id = R.styleable.ScrollPicker_labelSize, type = AttributeType.INTEGER)
+    int labelSize = 42;
+
+    private Scroller yearScroller;
+    private Scroller monthScroller;
+    private Scroller dayScroller;
     private IContainer year;
     private IContainer month;
     private IContainer day;
     private GestureDetector detector;
     private Rect renderTarget = new Rect();
-    private Attributes attributes;
+    private String monthName;
+    private String dayName;
+    private String yearName;
 
     public ScrollPicker(Context context) {
         super(context);
+        initCalendar();
         init();
     }
 
     public ScrollPicker(Context context, AttributeSet attrs) {
         super(context, attrs);
-        TypedArray array = null;
-        try {
-            array = getContext().obtainStyledAttributes(attrs, R.styleable.ScrollPicker, 0, 0);
-            attributes = new Attributes(array);
-        }
-        finally {
-            if(array != null) {
-                array.recycle();
-            }
-        }
-
+        initCalendar();
+        AttributeUtil.resolve(this, attrs, R.styleable.ScrollPicker);
+        mMonth++;
         init();
     }
 
-    private void init(){
+    private void initCalendar() {
+        Calendar current = Calendar.getInstance();
+        mDay = current.get(Calendar.DAY_OF_MONTH) + 1;
+        mYear = current.get(Calendar.YEAR);
+        mMonth = current.get(Calendar.MONTH) + 1;
+    }
+
+    private void init() {
         Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setColor(attributes.getTextColor());
+        textPaint.setColor(textColor);
         textPaint.setTypeface(Typeface.DEFAULT);
-        textPaint.setTextSize(attributes.getTextSize());
+        textPaint.setTextSize(textSize);
+
         DrawableItemFactory factory = new DrawableItemFactory(textPaint);
-        Rect bounds = factory.getSampleBounds(new Rect(), "2222");
-        NumericWindow window = new NumericWindow(1900, 2100, factory);
-        window.setPivot(attributes.getYear());
-        window.setFormat("%04d");
-        year = new ItemContainer(window, bounds.width(),bounds.height());
+        Rect bounds4 = factory.getSampleBounds(new Rect(), "2222");
+        Rect bounds2 = factory.getSampleBounds(new Rect(), "22");
+
+        NumericWindow yearsWindow = new NumericWindow(MIN_YEAR, MAX_YEAR, factory);
+        yearsWindow.setPivot(mYear);
+        yearsWindow.setFormat("%04d");
+        year = new ItemContainer(yearsWindow, bounds4.width(), bounds4.height());
         year.setOnItemChangedListener(new OnItemChangedListener() {
             @Override
             public void onItemChanged(IContainer sender, Object from, Object to) {
-                attributes.setYear((int) to);
+                mYear = (int) to;
             }
         });
-        detector = new GestureDetector(getContext(), new Detector());
-        scroller = new Scroller(getContext());
-    }
+        yearName = getContext().getString(R.string.picker_year_name);
+        yearScroller = new Scroller(getContext());
 
-    private static int DIM_GRAY = Color.argb(0x20, 0x40, 0x40, 0x40);
-    LinearGradient grad = new LinearGradient(100, 100, 100, 500,
-            new int[]{DIM_GRAY, Color.TRANSPARENT, Color.TRANSPARENT, DIM_GRAY},
-            new float[]{0f, 0.3f, 0.7f, 1f}, Shader.TileMode.CLAMP);
+        NumericWindow monthWindow = new NumericWindow(1, 12, factory);
+        monthWindow.setPivot(mMonth);
+        monthWindow.setFormat("%02d");
+        month = new ItemContainer(monthWindow, bounds2.width(), bounds2.height());
+        monthName = getContext().getString(R.string.picker_month_name);
+        monthScroller = new Scroller(getContext());
+
+        NumericWindow dayWindow = new NumericWindow(1, 31, factory);
+        dayWindow.setPivot(mDay);
+        dayWindow.setFormat("%02d");
+        day = new ItemContainer(dayWindow, bounds2.width(), bounds2.height());
+        dayName = getContext().getString(R.string.picker_day_name);
+        dayScroller = new Scroller(getContext());
+
+        detector = new GestureDetector(getContext(), new Detector());
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
@@ -183,7 +169,13 @@ public class ScrollPicker extends View {
         canvas.save(Canvas.CLIP_SAVE_FLAG);
         canvas.clipRect(renderTarget);
 
-        for (IDrawable drawable: year) {
+        for (IDrawable drawable : year) {
+            drawable.draw(canvas);
+        }
+        for (IDrawable drawable : month) {
+            drawable.draw(canvas);
+        }
+        for (IDrawable drawable : day) {
             drawable.draw(canvas);
         }
 
@@ -192,51 +184,42 @@ public class ScrollPicker extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int desiredWidth = (int) year.measureWidth() + getPaddingLeft() + getPaddingRight();
+        int desiredWidth = getPaddingLeft() + getPaddingRight() +
+                (int) year.measureWidth() + spacing +
+                (int) month.measureWidth() + spacing +
+                (int) day.measureWidth();
+
         int desiredHeight = (int) year.measureHeight() + getPaddingBottom() + getPaddingTop();
 
-        /*int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-
-        int width;
-        int height;
-
-        switch (widthMode) {
-            case MeasureSpec.EXACTLY:
-                width = widthSize;
-                break;
-            case MeasureSpec.AT_MOST:
-                width = desiredWidth;
-                break;
-            default: case MeasureSpec.UNSPECIFIED:
-                width = desiredWidth;
-                break;
-        }
-        switch (heightMode) {
-            case MeasureSpec.EXACTLY:
-                height = heightSize;
-                break;
-            case MeasureSpec.AT_MOST:
-                height = desiredHeight;
-                break;
-            default: case MeasureSpec.UNSPECIFIED:
-                height = desiredHeight;
-                break;
-        }*/
-        renderTarget.set(0, 0, desiredWidth, desiredHeight);
+        renderTarget.set(getPaddingLeft(), getPaddingTop(), desiredWidth, desiredHeight);
         year.setOrigin(getPaddingLeft(), getPaddingTop());
+        month.setOrigin(getPaddingLeft() + year.measureWidth() + spacing, getPaddingTop());
+        day.setOrigin(getPaddingLeft() + year.measureWidth() +
+                spacing + month.measureWidth() + spacing, getPaddingTop());
         setMeasuredDimension(desiredWidth, desiredHeight);
     }
 
     @Override
     public void computeScroll() {
         super.computeScroll();
-        final float lastY = scroller.getCurrY();
-        boolean isContinued = scroller.computeScrollOffset();
-        if(isContinued){
-            year.scroll(scroller.getCurrY() - lastY);
+        final float lastYear = yearScroller.getCurrY();
+        final float lastMonth = monthScroller.getCurrY();
+        final float lastDay = dayScroller.getCurrY();
+
+        boolean isContinued = false;
+        if (yearScroller.computeScrollOffset()) {
+            year.scroll(yearScroller.getCurrY() - lastYear);
+            isContinued = true;
+        }
+        if (monthScroller.computeScrollOffset()) {
+            month.scroll(monthScroller.getCurrY() - lastMonth);
+            isContinued = true;
+        }
+        if (dayScroller.computeScrollOffset()) {
+            day.scroll(dayScroller.getCurrY() - lastDay);
+            isContinued = true;
+        }
+        if (isContinued) {
             ViewCompat.postInvalidateOnAnimation(this);
         }
     }
